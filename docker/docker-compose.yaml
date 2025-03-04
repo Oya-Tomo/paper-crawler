@@ -5,6 +5,8 @@ services:
       dockerfile: Dockerfile
     hostname: crawler
     container_name: pc-crawler
+    expose:
+      - 8080
     tty: true
     volumes:
       - ../crawler:/workspace
