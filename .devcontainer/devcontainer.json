@@ -1,0 +1,16 @@
+{
+    "name": "Paper Crawler - Devcontainer",
+    "dockerComposeFile": "../docker/docker-compose.devel.yaml",
+    "service": "crawler",
+    "workspaceFolder": "/workspace",
+    "shutdownAction": "stopCompose",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "ms-azuretools.vscode-docker",
+                "GitHub.copilot"
+            ]
+        }
+    }
+}

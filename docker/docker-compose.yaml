@@ -1,0 +1,21 @@
+services:
+  crawler:
+    build:
+      context: ../crawler
+      dockerfile: Dockerfile
+    hostname: crawler
+    container_name: pc-crawler
+    tty: true
+    volumes:
+      - ../crawler:/workspace
+  db:
+    image: postgres:17
+    hostname: db
+    container_name: pc-db
+    expose:
+      - "5432"
+    tty: true
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=database
