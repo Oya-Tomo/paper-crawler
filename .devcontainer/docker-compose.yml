@@ -1,0 +1,23 @@
+services:
+  paper-crawler-dev:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    hostname: paper-crawler-dev
+    container_name: paper-crawler-dev
+    expose:
+      - "8080"
+    tty: true
+    volumes:
+      - ..:/workspace
+  db-dev:
+    image: postgres:17
+    hostname: db
+    container_name: pc-db-dev
+    expose:
+      - "5432"
+    tty: true
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=database
