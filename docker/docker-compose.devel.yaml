@@ -2,7 +2,7 @@ services:
   crawler:
     build:
       context: ../crawler
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     hostname: crawler
     container_name: pc-crawler.dev
     tty: true
