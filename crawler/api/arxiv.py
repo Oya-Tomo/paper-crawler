@@ -84,7 +84,7 @@ def xml_to_arxiv_json(xml: ET.Element):
 
 
 def extract_arxiv_id(id: str):
-    return re.findall(r"[http|https]://arxiv.org/abs/\d+\.\d+", id)[0]
+    return re.match(r"^(http|https)://arxiv.org/abs/(.*)(v\d)", id).group(2)
 
 
 def arxiv_id_to_(id: str):
