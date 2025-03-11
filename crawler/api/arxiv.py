@@ -81,3 +81,11 @@ def xml_to_arxiv_json(xml: ET.Element):
                     entry["categories"].append(entry_child["attributes"]["term"])
             entries.append(entry)
     return entries
+
+
+def extract_arxiv_id(id: str):
+    return re.findall(r"[http|https]://arxiv.org/abs/\d+\.\d+", id)[0]
+
+
+def arxiv_id_to_(id: str):
+    return id.replace("/", "%").replace(".", "_")
