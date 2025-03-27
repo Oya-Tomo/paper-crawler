@@ -3,14 +3,14 @@ services:
     build:
       context: ../crawler
       dockerfile: Dockerfile
-    hostname: crawler
+    hostname: pc-crawler
     container_name: pc-crawler
     expose:
       - 8080
     tty: true
     volumes:
       - ../crawler:/workspace
-      - paper-crawler-volume:/workspace/volume
+      - paper-crawler-volume:/volume
 
 volumes:
   paper-crawler-volume:
