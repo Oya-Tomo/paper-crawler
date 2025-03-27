@@ -10,7 +10,7 @@ services:
     tty: true
     volumes:
       - ..:/workspace
-      - paper-crawler-volume:/workspace/volume
+      - paper-crawler-volume:/volume
 
 volumes:
   paper-crawler-volume:
