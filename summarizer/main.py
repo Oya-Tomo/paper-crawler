@@ -4,10 +4,10 @@ from typing import Literal
 
 from fastapi import FastAPI
 from pydantic import BaseModel
-from sqlalchemy import select, insert, func
+from sqlalchemy import select
 
 from model import Paper
-from summarizer.database import Session, PaperRow
+from database import Session, PaperRow
 
 
 server = FastAPI(
