@@ -59,9 +59,9 @@ class CreatePaperRequest(BaseModel):
 async def create_paper(request: CreatePaperRequest):
     session = Session()
 
-    exsiting_paper = session.scalars(
+    exsiting_paper = session.scalar(
         select(PaperRow).where(PaperRow.id == request.id),
-    ).first()
+    )
     if exsiting_paper is not None:
         return StatusResponse(status=Status.failed, message="Paper already exists")
 
@@ -100,9 +100,9 @@ class GetPaperResponse(BaseModel):
 async def get_paper(request: GetPaperRequest):
     session = Session()
 
-    paper = session.scalars(
+    paper = session.scalar(
         select(PaperRow).where(PaperRow.id == request.id),
-    ).first()
+    )
     if paper is None:
         return GetPaperResponse(
             status=Status.failed, message="Paper not found", paper=None
@@ -234,15 +234,18 @@ class SummarizePaperResponse(BaseModel):
     summary: str | None
 
 
-# @server.post("/summarize", response_model=SummarizePaperResponse)
-# async def summarize_paper(request: SummarizePaperRequest):
-#     session = Session()
-#     paper = session.query(Paper).filter_by(id=request.id).first()
-#     if paper is None:
-#         return SummarizePaperResponse(
-#             status=Status.failed, message="Paper not found", summary=None
-#         )
-#     # Here you would call your summarization logic
+@server.post("/summarize", response_model=SummarizePaperResponse)
+async def summarize_paper(request: SummarizePaperRequest):
+    session = Session()
+    paper = session.scalar(
+        select(PaperRow).where(PaperRow.id == request.id),
+    )
+    if paper is None:
+        return SummarizePaperResponse(
+            status=Status.failed, message="Paper not found", topics=None, summary=None
+        )
+
+    # TODO: Implement the summarization logic
 
 
 class UpdatePaperRequest(BaseModel):
@@ -267,14 +270,16 @@ class UpdatePaperRequest(BaseModel):
 class UpdatePaperResponse(BaseModel):
     status: Status
     message: str
-    paper: PaperRow | None
+    paper: Paper | None
 
 
 @server.put("/update", response_model=UpdatePaperResponse)
 async def update_paper(request: UpdatePaperRequest):
     session = Session()
 
-    paper = session.query(PaperRow).filter_by(id=request.id).first()
+    paper = session.scalar(
+        select(PaperRow).where(PaperRow.id == request.id),
+    )
     if paper is None:
         return UpdatePaperResponse(
             status=Status.failed, message="Paper not found", paper=None
@@ -304,7 +309,9 @@ async def update_paper(request: UpdatePaperRequest):
     session.commit()
 
     return UpdatePaperResponse(
-        status=Status.ok, message="Paper updated successfully", paper=paper
+        status=Status.ok,
+        message="Paper updated successfully",
+        paper=Paper.from_sql(paper),
     )
 
 
@@ -312,25 +319,23 @@ class DeletePaperRequest(BaseModel):
     id: str
 
 
-class DeletePaperResponse(BaseModel):
-    status: Status
-    message: str
-    paper: PaperRow | None
-
-
-@server.delete("/delete", response_model=DeletePaperResponse)
+@server.delete("/delete", response_model=StatusResponse)
 async def delete_paper(request: DeletePaperRequest):
     session = Session()
 
-    paper = session.query(PaperRow).filter_by(id=request.id).first()
+    paper = session.scalar(
+        select(PaperRow).where(PaperRow.id == request.id),
+    )
     if paper is None:
-        return DeletePaperResponse(
-            status=Status.failed, message="Paper not found", paper=None
+        return StatusResponse(
+            status=Status.failed,
+            message="Paper not found",
         )
 
     session.delete(paper)
     session.commit()
 
-    return DeletePaperResponse(
-        status=Status.ok, message="Paper deleted successfully", paper=paper
+    return StatusResponse(
+        status=Status.ok,
+        message="Paper deleted successfully",
     )
