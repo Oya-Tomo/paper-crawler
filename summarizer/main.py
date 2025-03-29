@@ -57,33 +57,32 @@ class CreatePaperRequest(BaseModel):
 
 @server.post("/create", response_model=StatusResponse)
 async def create_paper(request: CreatePaperRequest):
-    session = Session()
+    with Session() as session:
+        exsiting_paper = session.scalar(
+            select(PaperRow).where(PaperRow.id == request.id),
+        )
+        if exsiting_paper is not None:
+            return StatusResponse(status=Status.failed, message="Paper already exists")
 
-    exsiting_paper = session.scalar(
-        select(PaperRow).where(PaperRow.id == request.id),
-    )
-    if exsiting_paper is not None:
-        return StatusResponse(status=Status.failed, message="Paper already exists")
+        paper = PaperRow(
+            id=request.id,
+            title=request.title,
+            abstract=request.abstract,
+            authors=request.authors,
+            organizations=request.organizations,
+            url=request.url,
+            pdf=request.pdf,
+            journal=request.journal,
+            doi=request.doi,
+            topics=None,
+            summary=None,
+            published_at=request.published_at,
+            updated_at=request.updated_at,
+        )
+        session.add(paper)
+        session.commit()
 
-    paper = PaperRow(
-        id=request.id,
-        title=request.title,
-        abstract=request.abstract,
-        authors=request.authors,
-        organizations=request.organizations,
-        url=request.url,
-        pdf=request.pdf,
-        journal=request.journal,
-        doi=request.doi,
-        topics=None,
-        summary=None,
-        published_at=request.published_at,
-        updated_at=request.updated_at,
-    )
-    session.add(paper)
-    session.commit()
-
-    return StatusResponse(status=Status.ok, message="Paper created successfully")
+        return StatusResponse(status=Status.ok, message="Paper created successfully")
 
 
 class GetPaperRequest(BaseModel):
@@ -98,21 +97,20 @@ class GetPaperResponse(BaseModel):
 
 @server.get("/get", response_model=GetPaperResponse)
 async def get_paper(request: GetPaperRequest):
-    session = Session()
-
-    paper = session.scalar(
-        select(PaperRow).where(PaperRow.id == request.id),
-    )
-    if paper is None:
-        return GetPaperResponse(
-            status=Status.failed, message="Paper not found", paper=None
+    with Session() as session:
+        paper = session.scalar(
+            select(PaperRow).where(PaperRow.id == request.id),
         )
+        if paper is None:
+            return GetPaperResponse(
+                status=Status.failed, message="Paper not found", paper=None
+            )
 
-    return GetPaperResponse(
-        status=Status.ok,
-        message="Paper found",
-        paper=Paper.from_sql(paper),
-    )
+        return GetPaperResponse(
+            status=Status.ok,
+            message="Paper found",
+            paper=Paper.from_sql(paper),
+        )
 
 
 class SearchQuery(BaseModel):
@@ -146,81 +144,80 @@ class SearchPaperResponse(BaseModel):
 
 @server.post("/search", response_model=SearchPaperResponse)
 async def search_paper(request: SearchPaperRequest):
-    session = Session()
+    with Session() as session:
+        query = select(PaperRow)
+        for search_query in request.queries:
+            if search_query.column == "id":
+                query = query.where(
+                    PaperRow.id.ilike(f"%{search_query.value}%"),
+                )
+            elif search_query.column == "title":
+                query = query.where(
+                    PaperRow.title.ilike(f"%{search_query.value}%"),
+                )
+            elif search_query.column == "abstract":
+                query = query.where(
+                    PaperRow.abstract.ilike(f"%{search_query.value}%"),
+                )
+            elif search_query.column == "authors":
+                query = query.where(
+                    PaperRow.authors.any().ilike(f"%{search_query.value}%"),
+                )
+            elif search_query.column == "organizations":
+                query = query.where(
+                    PaperRow.organizations.any().ilike(f"%{search_query.value}%"),
+                )
+            elif search_query.column == "url":
+                query = query.where(
+                    PaperRow.url.ilike(f"%{search_query.value}%"),
+                )
+            elif search_query.column == "journal":
+                query = query.where(
+                    PaperRow.journal.ilike(f"%{search_query.value}%"),
+                )
+            elif search_query.column == "doi":
+                query = query.where(
+                    PaperRow.doi.ilike(f"%{search_query.value}%"),
+                )
+            elif search_query.column == "topics":
+                query = query.where(
+                    PaperRow.topics.any().ilike(f"%{search_query.value}%"),
+                )
+            elif search_query.column == "published_at":
+                query = query.where(
+                    PaperRow.published_at
+                    == datetime.datetime.strptime(
+                        search_query.value,
+                        "%Y-%m-%d %H:%M:%S.%f",
+                    ),
+                )
+            elif search_query.column == "updated_at":
+                query = query.where(
+                    PaperRow.updated_at
+                    == datetime.datetime.strptime(
+                        search_query.value,
+                        "%Y-%m-%d %H:%M:%S.%f",
+                    ),
+                )
+            else:
+                return SearchPaperResponse(
+                    status=Status.error,
+                    message="Invalid query column",
+                    papers=[],
+                )
 
-    query = select(PaperRow)
-    for search_query in request.queries:
-        if search_query.column == "id":
-            query = query.where(
-                PaperRow.id.ilike(f"%{search_query.value}%"),
-            )
-        elif search_query.column == "title":
-            query = query.where(
-                PaperRow.title.ilike(f"%{search_query.value}%"),
-            )
-        elif search_query.column == "abstract":
-            query = query.where(
-                PaperRow.abstract.ilike(f"%{search_query.value}%"),
-            )
-        elif search_query.column == "authors":
-            query = query.where(
-                PaperRow.authors.any().ilike(f"%{search_query.value}%"),
-            )
-        elif search_query.column == "organizations":
-            query = query.where(
-                PaperRow.organizations.any().ilike(f"%{search_query.value}%"),
-            )
-        elif search_query.column == "url":
-            query = query.where(
-                PaperRow.url.ilike(f"%{search_query.value}%"),
-            )
-        elif search_query.column == "journal":
-            query = query.where(
-                PaperRow.journal.ilike(f"%{search_query.value}%"),
-            )
-        elif search_query.column == "doi":
-            query = query.where(
-                PaperRow.doi.ilike(f"%{search_query.value}%"),
-            )
-        elif search_query.column == "topics":
-            query = query.where(
-                PaperRow.topics.any().ilike(f"%{search_query.value}%"),
-            )
-        elif search_query.column == "published_at":
-            query = query.where(
-                PaperRow.published_at
-                == datetime.datetime.strptime(
-                    search_query.value,
-                    "%Y-%m-%d %H:%M:%S.%f",
-                ),
-            )
-        elif search_query.column == "updated_at":
-            query = query.where(
-                PaperRow.updated_at
-                == datetime.datetime.strptime(
-                    search_query.value,
-                    "%Y-%m-%d %H:%M:%S.%f",
-                ),
-            )
-        else:
-            return SearchPaperResponse(
-                status=Status.error,
-                message="Invalid query column",
-                papers=[],
-            )
+        if request.limit is not None:
+            query = query.limit(request.limit)
+        if request.offset is not None:
+            query = query.offset(request.offset)
 
-    if request.limit is not None:
-        query = query.limit(request.limit)
-    if request.offset is not None:
-        query = query.offset(request.offset)
+        papers = session.scalars(query).all()
 
-    papers = session.scalars(query).all()
-
-    return SearchPaperResponse(
-        status=Status.ok,
-        message="Papers found",
-        papers=[Paper.from_sql(paper) for paper in papers],
-    )
+        return SearchPaperResponse(
+            status=Status.ok,
+            message="Papers found",
+            papers=[Paper.from_sql(paper) for paper in papers],
+        )
 
 
 class SummarizePaperRequest(BaseModel):
@@ -236,16 +233,19 @@ class SummarizePaperResponse(BaseModel):
 
 @server.post("/summarize", response_model=SummarizePaperResponse)
 async def summarize_paper(request: SummarizePaperRequest):
-    session = Session()
-    paper = session.scalar(
-        select(PaperRow).where(PaperRow.id == request.id),
-    )
-    if paper is None:
-        return SummarizePaperResponse(
-            status=Status.failed, message="Paper not found", topics=None, summary=None
+    with Session() as session:
+        paper = session.scalar(
+            select(PaperRow).where(PaperRow.id == request.id),
         )
+        if paper is None:
+            return SummarizePaperResponse(
+                status=Status.failed,
+                message="Paper not found",
+                topics=None,
+                summary=None,
+            )
 
-    # TODO: Implement the summarization logic
+        # TODO: Implement the summarization logic
 
 
 class UpdatePaperRequest(BaseModel):
@@ -275,44 +275,43 @@ class UpdatePaperResponse(BaseModel):
 
 @server.put("/update", response_model=UpdatePaperResponse)
 async def update_paper(request: UpdatePaperRequest):
-    session = Session()
-
-    paper = session.scalar(
-        select(PaperRow).where(PaperRow.id == request.id),
-    )
-    if paper is None:
-        return UpdatePaperResponse(
-            status=Status.failed, message="Paper not found", paper=None
+    with Session() as session:
+        paper = session.scalar(
+            select(PaperRow).where(PaperRow.id == request.id),
         )
+        if paper is None:
+            return UpdatePaperResponse(
+                status=Status.failed, message="Paper not found", paper=None
+            )
 
-    if request.title is not None:
-        paper.title = request.title
-    if request.abstract is not None:
-        paper.abstract = request.abstract
-    if request.authors is not None:
-        paper.authors = request.authors
-    if request.organizations is not None:
-        paper.organizations = request.organizations
-    if request.url is not None:
-        paper.url = request.url
-    if request.pdf is not None:
-        paper.pdf = request.pdf
-    if request.journal is not None:
-        paper.journal = request.journal
-    if request.doi is not None:
-        paper.doi = request.doi
-    if request.published_at is not None:
-        paper.published_at = request.published_at
-    if request.updated_at is not None:
-        paper.updated_at = request.updated_at
+        if request.title is not None:
+            paper.title = request.title
+        if request.abstract is not None:
+            paper.abstract = request.abstract
+        if request.authors is not None:
+            paper.authors = request.authors
+        if request.organizations is not None:
+            paper.organizations = request.organizations
+        if request.url is not None:
+            paper.url = request.url
+        if request.pdf is not None:
+            paper.pdf = request.pdf
+        if request.journal is not None:
+            paper.journal = request.journal
+        if request.doi is not None:
+            paper.doi = request.doi
+        if request.published_at is not None:
+            paper.published_at = request.published_at
+        if request.updated_at is not None:
+            paper.updated_at = request.updated_at
 
-    session.commit()
+        session.commit()
 
-    return UpdatePaperResponse(
-        status=Status.ok,
-        message="Paper updated successfully",
-        paper=Paper.from_sql(paper),
-    )
+        return UpdatePaperResponse(
+            status=Status.ok,
+            message="Paper updated successfully",
+            paper=Paper.from_sql(paper),
+        )
 
 
 class DeletePaperRequest(BaseModel):
@@ -321,21 +320,20 @@ class DeletePaperRequest(BaseModel):
 
 @server.delete("/delete", response_model=StatusResponse)
 async def delete_paper(request: DeletePaperRequest):
-    session = Session()
-
-    paper = session.scalar(
-        select(PaperRow).where(PaperRow.id == request.id),
-    )
-    if paper is None:
-        return StatusResponse(
-            status=Status.failed,
-            message="Paper not found",
+    with Session() as session:
+        paper = session.scalar(
+            select(PaperRow).where(PaperRow.id == request.id),
         )
+        if paper is None:
+            return StatusResponse(
+                status=Status.failed,
+                message="Paper not found",
+            )
 
-    session.delete(paper)
-    session.commit()
+        session.delete(paper)
+        session.commit()
 
-    return StatusResponse(
-        status=Status.ok,
-        message="Paper deleted successfully",
-    )
+        return StatusResponse(
+            status=Status.ok,
+            message="Paper deleted successfully",
+        )
