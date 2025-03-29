@@ -16,7 +16,8 @@ RUN /venv/bin/python3 -m pip install \
     pydantic \
     requests \
     sqlalchemy \
-    psycopg2-binary
+    psycopg2-binary \
+    openai
 
 ENV PATH="/venv/bin:$PATH"
 ENV VIRTUAL_ENV="/venv"
