@@ -26,17 +26,20 @@ class Paper(BaseModel):
     updated_at: datetime.datetime
 
     @classmethod
-    def from_sql(self, paper: database.PaperRow):
-        self.id = paper.id
-        self.title = paper.title
-        self.abstract = paper.abstract
-        self.authors = paper.authors
-        self.organizations = paper.organizations
-        self.url = paper.url
-        self.pdf = paper.pdf
-        self.journal = paper.journal
-        self.doi = paper.doi
-        self.topics = paper.topics
-        self.summary = paper.summary
-        self.published_at = paper.published_at
-        self.updated_at = paper.updated_at
+    def from_sql(self, paper_row: database.PaperRow):
+        paper = Paper(
+            id=paper_row.id,
+            title=paper_row.title,
+            abstract=paper_row.abstract,
+            authors=paper_row.authors,
+            organizations=paper_row.organizations,
+            url=paper_row.url,
+            pdf=paper_row.pdf,
+            journal=paper_row.journal,
+            doi=paper_row.doi,
+            topics=paper_row.topics,
+            summary=paper_row.summary,
+            published_at=paper_row.published_at,
+            updated_at=paper_row.updated_at,
+        )
+        return paper
