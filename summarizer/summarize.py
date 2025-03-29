@@ -229,8 +229,7 @@ def generate_summary(pdf: str) -> (
 if __name__ == "__main__":
     from pprint import pprint
 
-    # pdf_url = "https://arxiv.org/pdf/1706.03762"  # Attention Is All You Need
-    pdf_url = "https://arxiv.org/pdf/1803.10122"  # Example PDF URL
+    pdf_url = "https://arxiv.org/pdf/1706.03762"  # Attention Is All You Need
     summary, keywords = generate_summary(pdf_url)
 
     print("Summary:")
