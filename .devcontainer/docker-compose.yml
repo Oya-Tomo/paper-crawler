@@ -10,6 +10,8 @@ services:
     tty: true
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@paper-crawler-dev-db:5432/database
+    env_file:
+      - .env
     volumes:
       - ..:/workspace
       - paper-crawler-volume:/volume
