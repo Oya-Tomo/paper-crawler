@@ -215,7 +215,7 @@ async def search_paper(request: SearchPaperRequest):
 
         return SearchPaperResponse(
             status=Status.ok,
-            message="Papers found",
+            message="Papers searched successfully",
             papers=[Paper.from_sql(paper) for paper in papers],
         )
 
