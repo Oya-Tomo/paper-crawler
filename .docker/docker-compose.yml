@@ -1,17 +1,51 @@
 services:
-  crawler:
+  collector:
     build:
-      context: ../crawler
+      context: ../collector
       dockerfile: Dockerfile
-    hostname: pc-crawler
-    container_name: pc-crawler
+    hostname: pc-collector
+    container_name: pc-collector
+    expose:
+      - 7070
+    tty: true
+    env_file:
+      - .env
+    volumes:
+      - ../collector:/workspace
+      - paper-crawler-volume:/volume
+
+  summarizer:
+    build:
+      context: ../summarizer
+      dockerfile: Dockerfile
+    hostname: pc-summarizer
+    container_name: pc-summarizer
     expose:
       - 8080
     tty: true
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@pc-db:5432/database
+    env_file:
+      - .env
     volumes:
-      - ../crawler:/workspace
+      - ../summarizer:/workspace
       - paper-crawler-volume:/volume
+
+  db:
+    image: postgres
+    hostname: pc-db
+    container_name: pc-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: database
+    expose:
+      - 5432
+    volumes:
+      - paper-crawler-volume-postgres:/var/lib/postgresql/data
 
 volumes:
   paper-crawler-volume:
+    driver: local
+  paper-crawler-volume-postgres:
     driver: local
