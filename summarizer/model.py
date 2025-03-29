@@ -25,6 +25,7 @@ class Paper(BaseModel):
     published_at: datetime.datetime
     updated_at: datetime.datetime
 
+    @classmethod
     def from_sql(self, paper: database.PaperRow):
         self.id = paper.id
         self.title = paper.title
