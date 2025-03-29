@@ -83,20 +83,30 @@ def xml_to_arxiv_json(xml: ET.Element):
     return entries
 
 
-def extract_arxiv_id(id: str):
-    return re.match(r"^(http|https)://arxiv.org/abs/(.*)(v\d)", id).group(2)
-
-
-def arxiv_id_to_(id: str):
-    return id.replace("/", "%").replace(".", "_")
+def url_to_arxiv_id(url: str) -> str | None:
+    id_part = re.match(r"^(http|https)://arxiv.org/abs/([a-zA-Z0-9.\-/]*)$", url)
+    if id_part is None:
+        return None
+    version_part = re.search(r"v\d+$", id_part.group(2))
+    if version_part is None:
+        return id_part.group(2)
+    else:
+        return id_part.group(2)[: -len(version_part.group(0))]
 
 
 if __name__ == "__main__":
     import requests
     import json
 
-    url = "http://export.arxiv.org/api/query?search_query=all:electron&start=0&max_results=1"
+    url = (
+        "http://export.arxiv.org/api/query?search_query=all:llm&start=0&max_results=10"
+    )
     response = requests.get(url)
     xml = ET.fromstring(response.text)
     data = xml_to_arxiv_json(xml)
     print(json.dumps(data, indent=2))
+
+    new_type_url = "https://arxiv.org/abs/2308.08241"
+    print("old type arxiv id:", url_to_arxiv_id(new_type_url))
+    old_type_url = "https://arxiv.org/abs/cond-mat/0102536v132"
+    print("new type arxiv id:", url_to_arxiv_id(old_type_url))
