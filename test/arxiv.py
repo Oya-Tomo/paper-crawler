@@ -5,10 +5,6 @@ import xml.etree.ElementTree as ET
 import pprint
 import json
 
-base_url = "http://export.arxiv.org/api/query"
-query = "search_query=all:electron"
-response = requests.get(f"{base_url}?{query}")
-
 
 def xml_to_json(xml: ET.Element):
     # Convert XML to JSON
@@ -91,5 +87,17 @@ def xml_to_arxiv_json(xml: ET.Element):
     return entries
 
 
-# print(json.dumps(xml_to_json(ET.fromstring(response.text))))
-print(json.dumps(xml_to_arxiv_json(ET.fromstring(response.text))))
+def extract_arxiv_id(id: str):
+    return re.match(r"^(http|https)://arxiv.org/abs/(.*)(v\d)", id).group(2)
+
+
+if __name__ == "__main__":
+    base_url = "http://export.arxiv.org/api/query"
+    query = "search_query=all:electron"
+    response = requests.get(f"{base_url}?{query}")
+
+    pprint.pprint(xml_to_json(ET.fromstring(response.text)))
+    pprint.pprint(xml_to_arxiv_json(ET.fromstring(response.text)))
+
+    print(extract_arxiv_id("http://arxiv.org/abs/cond-mat/0310615v1"))
+    print(extract_arxiv_id("http://arxiv.org/abs/2010.01066v1"))
