@@ -98,9 +98,7 @@ if __name__ == "__main__":
     import requests
     import json
 
-    url = (
-        "http://export.arxiv.org/api/query?search_query=all:llm&start=0&max_results=10"
-    )
+    url = "http://export.arxiv.org/api/query?search_query=all:electron&start=0&max_results=10"
     response = requests.get(url)
     xml = ET.fromstring(response.text)
     data = xml_to_arxiv_json(xml)

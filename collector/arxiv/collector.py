@@ -1,0 +1,68 @@
+import datetime
+import xml.etree.ElementTree as ET
+
+import requests
+from pydantic import BaseModel
+from typing import Self
+
+from api import xml_to_arxiv_json, url_to_arxiv_id
+
+ID_PREFIX = "arxiv:"
+
+
+class ArxivPaper(BaseModel):
+    id: str
+
+    title: str
+    abstract: str
+
+    authors: list[str]
+    organizations: list[str]
+
+    url: str
+    pdf: str
+
+    journal: str | None
+    doi: str | None
+
+    published_at: datetime.datetime
+    updated_at: datetime.datetime
+
+    @classmethod
+    def from_dict(self, data: dict) -> Self:
+        return ArxivPaper(
+            id=ID_PREFIX + url_to_arxiv_id(data["id"]),
+            title=data["title"],
+            abstract=data["summary"],
+            authors=[author["name"] for author in data["authors"]],
+            organizations=list(
+                set(author["affiliation"] for author in data["authors"]) - {None}
+            ),
+            url=data["id"],
+            pdf=data["pdf"],
+            journal=data["journal_ref"],
+            doi=data["doi"],
+            published_at=datetime.datetime.fromisoformat(data["published"]),
+            updated_at=datetime.datetime.fromisoformat(data["updated"]),
+        )
+
+
+def collect_arxiv_papers(
+    query: str, start: int = 0, max_results: int = 10
+) -> list[ArxivPaper]:
+    url = f"http://export.arxiv.org/api/query?search_query={query}&start={start}&max_results={max_results}"
+    response = requests.get(url)
+    xml = ET.fromstring(response.text)
+    data = xml_to_arxiv_json(xml)
+
+    return [ArxivPaper.from_dict(paper) for paper in data]
+
+
+if __name__ == "__main__":
+    query = "all:electron"
+    start = 0
+    max_results = 10
+    papers = collect_arxiv_papers(query, start, max_results)
+
+    for paper in papers:
+        print(paper.model_dump_json(indent=2))
