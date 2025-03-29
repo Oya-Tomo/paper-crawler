@@ -18,7 +18,7 @@ This gathers paper information and registers it to the summarizer.
 
 ### LLM Summarizer
 
-Server for stock summaries of paper.
+Server to stock summaries of papers.
 
 ### Notion Summary Connector
 
