@@ -19,7 +19,7 @@ class Base(DeclarativeBase):
     pass
 
 
-class PaperRow(Base, BaseModel):
+class PaperRow(Base):
     __tablename__ = "papers"
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
