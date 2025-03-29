@@ -89,3 +89,14 @@ def extract_arxiv_id(id: str):
 
 def arxiv_id_to_(id: str):
     return id.replace("/", "%").replace(".", "_")
+
+
+if __name__ == "__main__":
+    import requests
+    import json
+
+    url = "http://export.arxiv.org/api/query?search_query=all:electron&start=0&max_results=1"
+    response = requests.get(url)
+    xml = ET.fromstring(response.text)
+    data = xml_to_arxiv_json(xml)
+    print(json.dumps(data, indent=2))
