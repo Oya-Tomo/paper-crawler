@@ -10,9 +10,7 @@ RUN /venv/bin/python3 -m pip install \
     fastapi \
     "uvicorn[standard]" \
     pydantic \
-    requests \
-    sqlalchemy \
-    psycopg2-binary
+    requests
 
 ENV PATH="/venv/bin:$PATH"
 ENV VIRTUAL_ENV="/venv"
