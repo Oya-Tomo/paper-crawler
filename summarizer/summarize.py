@@ -38,23 +38,24 @@ def generate_summary(pdf: str) -> (
     ]
     | None
 ):
-    if not download_pdf(pdf):
-        return None
+    try:
+        if not download_pdf(pdf):
+            return None
 
-    # Upload the PDF file
-    file = client.files.create(
-        file=open(DOWNLOAD_TEMP_FILE, "rb"),
-        purpose="assistants",
-    )
+        # Upload the PDF file
+        file = client.files.create(
+            file=open(DOWNLOAD_TEMP_FILE, "rb"),
+            purpose="assistants",
+        )
 
-    delete_temp_file()
+        delete_temp_file()
 
-    system_instruction = """\
+        system_instruction = """\
 あなたは論文を要約するためのAIです。\
 出力はresponse_formatに従って記述してください。\
 """
 
-    instruction = """\
+        instruction = """\
 # task: 添付した論文を以下の項目で要約してください。
 各項目ごとに設定されている注意点・文字数に従って記述してください。
 なお、論文中の専門単語を無理に日本語に訳さず、英語のまま使用してください。
@@ -93,73 +94,73 @@ def generate_summary(pdf: str) -> (
 }
 """
 
-    completion = client.chat.completions.create(
-        model=OPENAI_MODEL,
-        messages=[
-            {
-                "role": "developer",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": system_instruction,
-                    }
-                ],
-            },
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "file",
-                        "file": {"file_id": file.id},
-                    },
-                    {
-                        "type": "text",
-                        "text": instruction,
-                    },
-                ],
-            },
-        ],
-        response_format={
-            "type": "json_schema",
-            "json_schema": {
-                "name": "paper_summary",
-                "strict": True,
-                "schema": {
-                    "type": "object",
-                    "properties": {
-                        "sections": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "section": {
-                                        "type": "string",
-                                        "description": "項目名 例: 背景",
+        completion = client.chat.completions.create(
+            model=OPENAI_MODEL,
+            messages=[
+                {
+                    "role": "developer",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": system_instruction,
+                        }
+                    ],
+                },
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "file",
+                            "file": {"file_id": file.id},
+                        },
+                        {
+                            "type": "text",
+                            "text": instruction,
+                        },
+                    ],
+                },
+            ],
+            response_format={
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "paper_summary",
+                    "strict": True,
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "sections": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "section": {
+                                            "type": "string",
+                                            "description": "項目名 例: 背景",
+                                        },
+                                        "content": {
+                                            "type": "string",
+                                            "description": "要約内容",
+                                        },
                                     },
-                                    "content": {
-                                        "type": "string",
-                                        "description": "要約内容",
-                                    },
+                                    "required": ["section", "content"],
+                                    "additionalProperties": False,
                                 },
-                                "required": ["section", "content"],
-                                "additionalProperties": False,
                             },
                         },
+                        "required": ["sections"],
+                        "additionalProperties": False,
                     },
-                    "required": ["sections"],
-                    "additionalProperties": False,
                 },
             },
-        },
-    )
-    # Extract the summary from the response
-    summary = json.loads(completion.choices[0].message.content)["sections"]
+        )
+        # Extract the summary from the response
+        summary = json.loads(completion.choices[0].message.content)["sections"]
 
-    system_instruction = """\
+        system_instruction = """\
 あなたは論文を解析するためのAIです。\
 出力はresponse_formatに従って記述してください。\
 """
-    instruction = """\
+        instruction = """\
 # task: 添付した論文からキーワード・トピックを10個抽出してください。
 
 # output format
@@ -172,59 +173,62 @@ def generate_summary(pdf: str) -> (
 }
 """
 
-    completion = client.chat.completions.create(
-        model=OPENAI_MODEL,
-        messages=[
-            {
-                "role": "developer",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": system_instruction,
-                    }
-                ],
-            },
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "file",
-                        "file": {"file_id": file.id},
-                    },
-                    {
-                        "type": "text",
-                        "text": instruction,
-                    },
-                ],
-            },
-        ],
-        response_format={
-            "type": "json_schema",
-            "json_schema": {
-                "name": "paper_keywords",
-                "strict": True,
-                "schema": {
-                    "type": "object",
-                    "properties": {
-                        "keywords": {
-                            "type": "array",
-                            "items": {
-                                "type": "string",
-                                "description": "キーワード",
+        completion = client.chat.completions.create(
+            model=OPENAI_MODEL,
+            messages=[
+                {
+                    "role": "developer",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": system_instruction,
+                        }
+                    ],
+                },
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "file",
+                            "file": {"file_id": file.id},
+                        },
+                        {
+                            "type": "text",
+                            "text": instruction,
+                        },
+                    ],
+                },
+            ],
+            response_format={
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "paper_keywords",
+                    "strict": True,
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "keywords": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string",
+                                    "description": "キーワード",
+                                },
                             },
                         },
+                        "required": ["keywords"],
+                        "additionalProperties": False,
                     },
-                    "required": ["keywords"],
-                    "additionalProperties": False,
                 },
             },
-        },
-    )
-    # Extract the keywords from the response
-    keywords = json.loads(completion.choices[0].message.content)["keywords"]
+        )
+        # Extract the keywords from the response
+        keywords = json.loads(completion.choices[0].message.content)["keywords"]
 
-    client.files.delete(file.id)
-    return summary, keywords
+        client.files.delete(file.id)
+        return summary, keywords
+    except Exception as e:
+        print(f"Error generating summary: {e}")
+        return None
 
 
 if __name__ == "__main__":

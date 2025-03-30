@@ -2,12 +2,13 @@ import datetime
 from enum import Enum
 from typing import Literal
 
-from fastapi import FastAPI
+from fastapi import FastAPI, BackgroundTasks
 from pydantic import BaseModel
 from sqlalchemy import select
 
 from model import Paper, PaperSource
 from database import Session, PaperRow
+from summarize import generate_summary
 
 
 server = FastAPI(
@@ -244,8 +245,35 @@ class SummarizePaperResponse(BaseModel):
     summary: str | None
 
 
-@server.post("/summarize", response_model=SummarizePaperResponse)
-async def summarize_paper(request: SummarizePaperRequest):
+def summarize_paper_on_background(paper: Paper):
+    result = generate_summary(paper.pdf)
+    if result is None:
+        print("Failed to generate summary")
+        return
+    summary, topics = result
+
+    with Session() as session:
+        paper_row = session.scalar(
+            select(PaperRow)
+            .where(PaperRow.id == paper.id)
+            .where(PaperRow.src == paper.src),
+        )
+        if paper_row is None:
+            return
+
+        paper_row.topics = topics
+        paper_row.summary = "\n\n".join(
+            [f"## {sect["section"]}\n{sect["content"]}" for sect in summary]
+        )
+        session.commit()
+        print("Summary generated successfully")
+
+
+@server.post("/summarize", response_model=StatusResponse)
+async def summarize_paper(
+    request: SummarizePaperRequest,
+    background_tasks: BackgroundTasks,
+):
     with Session() as session:
         paper = session.scalar(
             select(PaperRow)
@@ -253,14 +281,16 @@ async def summarize_paper(request: SummarizePaperRequest):
             .where(PaperRow.src == request.src),
         )
         if paper is None:
-            return SummarizePaperResponse(
+            return StatusResponse(
                 status=Status.failed,
                 message="Paper not found",
-                topics=None,
-                summary=None,
             )
 
-        # TODO: Implement the summarization logic
+        background_tasks.add_task(summarize_paper_on_background, Paper.from_sql(paper))
+        return StatusResponse(
+            status=Status.ok,
+            message="Paper is being summarized",
+        )
 
 
 class UpdatePaperRequest(BaseModel):
