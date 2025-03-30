@@ -70,11 +70,13 @@ def collect_arxiv_papers(
 
 
 if __name__ == "__main__":
-    query = "all:electron"
+    query = None
+    id_list = "2503.21782"
     start = 0
     max_results = 10
     papers = collect_arxiv_papers(
         search_query=query,
+        id_list=id_list,
         start=start,
         max_results=max_results,
     )
