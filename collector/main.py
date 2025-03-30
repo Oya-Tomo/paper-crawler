@@ -9,7 +9,7 @@ import requests
 from fastapi import FastAPI
 import apscheduler
 
-from env import SUMMARIZER_URL
+from env import SUMMARIZER_URL, COLLECTION_PERIOD
 from arxiv.collector import collect_arxiv_papers, ArxivPaper
 
 
@@ -21,7 +21,7 @@ def startup():
     scheduler.add_job(
         collect_papers,
         "interval",
-        seconds=60 * 60 * 1,  # Every 24 hours
+        seconds=60 * 60 * COLLECTION_PERIOD,  # Defined in docker-compose
         next_run_time=apscheduler.util.datetime.now()
         + apscheduler.util.timedelta(seconds=5),
     )
