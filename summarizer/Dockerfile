@@ -17,4 +17,4 @@ RUN /venv/bin/python3 -m pip install \
 ENV PATH="/venv/bin:$PATH"
 ENV VIRTUAL_ENV="/venv"
 
-CMD ["uvicorn main:server --reload --host 0.0.0.0 --port 8080"]
+CMD ["uvicorn main:server --reload --host 0.0.0.0 --port 8000"]

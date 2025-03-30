@@ -6,8 +6,10 @@ services:
     hostname: pc-collector
     container_name: pc-collector
     expose:
-      - 7070
+      - 7000
     tty: true
+    environment:
+      - SUMMARIZER_URL=http://pc-summarizer:8000
     env_file:
       - .env
     volumes:
@@ -21,7 +23,7 @@ services:
     hostname: pc-summarizer
     container_name: pc-summarizer
     expose:
-      - 8080
+      - 8000
     tty: true
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@pc-db:5432/database
