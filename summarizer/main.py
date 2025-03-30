@@ -246,6 +246,7 @@ class SummarizePaperResponse(BaseModel):
 
 
 def summarize_paper_on_background(paper: Paper):
+    print(f"Summarizing paper {paper.id} from {paper.src}")
     result = generate_summary(paper.pdf)
     if result is None:
         print("Failed to generate summary")
