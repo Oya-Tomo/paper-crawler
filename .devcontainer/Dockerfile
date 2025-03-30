@@ -17,7 +17,8 @@ RUN /venv/bin/python3 -m pip install \
     requests \
     sqlalchemy \
     psycopg2-binary \
-    openai
+    openai \
+    apscheduler
 
 ENV PATH="/venv/bin:$PATH"
 ENV VIRTUAL_ENV="/venv"
