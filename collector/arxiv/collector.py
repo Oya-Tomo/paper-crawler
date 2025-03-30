@@ -5,7 +5,7 @@ import requests
 from pydantic import BaseModel
 from typing import Self
 
-from api import xml_to_arxiv_json, url_to_arxiv_id
+from arxiv.api import xml_to_arxiv_json, url_to_arxiv_id
 
 
 class ArxivPaper(BaseModel):
