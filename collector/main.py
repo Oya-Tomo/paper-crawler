@@ -73,6 +73,7 @@ def collect_papers():
             else:
                 print(f"Failed to update paper: {result.status_code}")
                 pprint.pprint(result.json())
+                continue
 
         else:
             print("Create paper:")
@@ -87,6 +88,19 @@ def collect_papers():
             else:
                 print(f"Failed to create paper: {result.status_code}")
                 pprint.pprint(result.json())
+                continue
+
+        print("Executing summarization...")
+        result = requests.post(
+            f"{SUMMARIZER_URL}/summarize",
+            json={
+                "id": paper.id,
+                "src": paper.src,
+            },
+        )
+        if result.status_code == 200:
+            print(f"Being summarized ...")
+            pprint.pprint(result.json())
 
 
 server = FastAPI(lifespan=lifespan)
