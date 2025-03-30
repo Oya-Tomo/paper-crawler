@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from sqlalchemy import select
 
-from model import Paper
+from model import Paper, PaperSource
 from database import Session, PaperRow
 
 
@@ -38,6 +38,7 @@ class StatusResponse(BaseModel):
 
 class CreatePaperRequest(BaseModel):
     id: str
+    src: PaperSource
 
     title: str
     abstract: str
@@ -59,13 +60,16 @@ class CreatePaperRequest(BaseModel):
 async def create_paper(request: CreatePaperRequest):
     with Session() as session:
         exsiting_paper = session.scalar(
-            select(PaperRow).where(PaperRow.id == request.id),
+            select(PaperRow)
+            .where(PaperRow.id == request.id)
+            .where(PaperRow.src == request.src),
         )
         if exsiting_paper is not None:
             return StatusResponse(status=Status.failed, message="Paper already exists")
 
         paper = PaperRow(
             id=request.id,
+            src=request.src,
             title=request.title,
             abstract=request.abstract,
             authors=request.authors,
@@ -87,6 +91,7 @@ async def create_paper(request: CreatePaperRequest):
 
 class GetPaperRequest(BaseModel):
     id: str
+    src: PaperSource
 
 
 class GetPaperResponse(BaseModel):
@@ -99,7 +104,9 @@ class GetPaperResponse(BaseModel):
 async def get_paper(request: GetPaperRequest):
     with Session() as session:
         paper = session.scalar(
-            select(PaperRow).where(PaperRow.id == request.id),
+            select(PaperRow)
+            .where(PaperRow.id == request.id)
+            .where(PaperRow.src == request.src),
         )
         if paper is None:
             return GetPaperResponse(
@@ -116,6 +123,7 @@ async def get_paper(request: GetPaperRequest):
 class SearchQuery(BaseModel):
     column: Literal[
         "id",
+        "src",
         "title",
         "abstract",
         "authors",
@@ -150,6 +158,10 @@ async def search_paper(request: SearchPaperRequest):
             if search_query.column == "id":
                 query = query.where(
                     PaperRow.id.ilike(f"%{search_query.value}%"),
+                )
+            elif search_query.column == "src":
+                query = query.where(
+                    PaperRow.src.ilike(f"%{search_query.value}%"),
                 )
             elif search_query.column == "title":
                 query = query.where(
@@ -222,6 +234,7 @@ async def search_paper(request: SearchPaperRequest):
 
 class SummarizePaperRequest(BaseModel):
     id: str
+    src: PaperSource
 
 
 class SummarizePaperResponse(BaseModel):
@@ -235,7 +248,9 @@ class SummarizePaperResponse(BaseModel):
 async def summarize_paper(request: SummarizePaperRequest):
     with Session() as session:
         paper = session.scalar(
-            select(PaperRow).where(PaperRow.id == request.id),
+            select(PaperRow)
+            .where(PaperRow.id == request.id)
+            .where(PaperRow.src == request.src),
         )
         if paper is None:
             return SummarizePaperResponse(
@@ -250,6 +265,7 @@ async def summarize_paper(request: SummarizePaperRequest):
 
 class UpdatePaperRequest(BaseModel):
     id: str
+    src: PaperSource
 
     title: str | None
     abstract: str | None
@@ -277,7 +293,9 @@ class UpdatePaperResponse(BaseModel):
 async def update_paper(request: UpdatePaperRequest):
     with Session() as session:
         paper = session.scalar(
-            select(PaperRow).where(PaperRow.id == request.id),
+            select(PaperRow)
+            .where(PaperRow.id == request.id)
+            .where(PaperRow.src == request.src),
         )
         if paper is None:
             return UpdatePaperResponse(
@@ -316,13 +334,16 @@ async def update_paper(request: UpdatePaperRequest):
 
 class DeletePaperRequest(BaseModel):
     id: str
+    src: PaperSource
 
 
 @server.delete("/delete", response_model=StatusResponse)
 async def delete_paper(request: DeletePaperRequest):
     with Session() as session:
         paper = session.scalar(
-            select(PaperRow).where(PaperRow.id == request.id),
+            select(PaperRow)
+            .where(PaperRow.id == request.id)
+            .where(PaperRow.src == request.src),
         )
         if paper is None:
             return StatusResponse(

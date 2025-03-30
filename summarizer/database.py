@@ -23,6 +23,9 @@ class PaperRow(Base):
     __tablename__ = "papers"
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
+    # ID of the paper in the database
+    src: Mapped[str] = mapped_column(String, primary_key=True)
+    # Source of the paper (e.g. arxiv, etc.)
 
     title: Mapped[str] = mapped_column(String, nullable=False)
     abstract: Mapped[str] = mapped_column(Text, nullable=False)

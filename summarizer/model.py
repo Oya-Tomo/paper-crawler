@@ -1,11 +1,19 @@
 import datetime
+from enum import Enum
+from typing import Literal
+
 from pydantic import BaseModel
 
 import database
 
 
+class PaperSource(str, Enum):
+    arxiv = "arxiv"
+
+
 class Paper(BaseModel):
-    id: str
+    id: str  # ID of the paper
+    src: PaperSource  # Source of the paper (e.g. arxiv, etc.)
 
     title: str
     abstract: str
@@ -29,6 +37,7 @@ class Paper(BaseModel):
     def from_sql(self, paper_row: database.PaperRow):
         paper = Paper(
             id=paper_row.id,
+            src=paper_row.src,
             title=paper_row.title,
             abstract=paper_row.abstract,
             authors=paper_row.authors,
