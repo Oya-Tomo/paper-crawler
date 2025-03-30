@@ -10,6 +10,7 @@ services:
     tty: true
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@paper-crawler-dev-db:5432/database
+      - SUMMARIZER_URL=http://localhost:8080
     env_file:
       - .env
     volumes:
