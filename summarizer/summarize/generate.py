@@ -4,7 +4,7 @@ import json
 import requests
 import openai
 
-from schema import DocumentSchema, SectionSchema, KeywordsSchema
+from .schema import DocumentSchema, SectionSchema, KeywordsSchema
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", None)
 if not OPENAI_API_KEY:
