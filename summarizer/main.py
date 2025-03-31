@@ -8,7 +8,7 @@ from sqlalchemy import select
 
 from model import Paper, PaperSource
 from database import Session, PaperRow
-from summarize import generate_summary
+from summarize.generate import generate_summary
 
 
 server = FastAPI(

@@ -1,3 +1,4 @@
+import os
 import datetime
 
 import sqlalchemy
@@ -6,8 +7,8 @@ from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import String, Text, DateTime, ARRAY
 from pydantic import BaseModel
 
+DATABASE_URL = os.getenv("DATABASE_URL", "")
 
-from env import DATABASE_URL
 
 engine = sqlalchemy.create_engine(
     DATABASE_URL,

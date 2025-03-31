@@ -4,7 +4,16 @@ import json
 import requests
 import openai
 
-from env import OPENAI_API_KEY, OPENAI_MODEL
+from schema import DocumentSchema, SectionSchema, KeywordsSchema
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", None)
+if not OPENAI_API_KEY:
+    raise ValueError("OPENAI_API_KEY environment variable is not set.")
+
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+if not OPENAI_MODEL:
+    raise ValueError("OPENAI_MODEL environment variable is not set.")
+
 
 client = openai.OpenAI()
 client.api_key = OPENAI_API_KEY
@@ -31,6 +40,50 @@ def delete_temp_file():
         print(f"Error deleting temp file: {e}")
 
 
+def generate_completion(
+    file_id: str,
+    system_prompt: str,
+    user_prompt: str,
+    response_schema: dict,
+) -> dict:
+    completion = client.chat.completions.create(
+        model=OPENAI_MODEL,
+        messages=[
+            {
+                "role": "developer",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": system_prompt,
+                    }
+                ],
+            },
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "file",
+                        "file": {"file_id": file_id},
+                    },
+                    {
+                        "type": "text",
+                        "text": user_prompt,
+                    },
+                ],
+            },
+        ],
+        response_format={
+            "type": "json_schema",
+            "json_schema": {
+                "name": "document_schema",
+                "strict": True,
+                "schema": response_schema,
+            },
+        },
+    )
+    return json.loads(completion.choices[0].message.content)
+
+
 def generate_summary(pdf: str) -> (
     tuple[
         list[dict[str, str]],
@@ -42,191 +95,154 @@ def generate_summary(pdf: str) -> (
         if not download_pdf(pdf):
             return None
 
-        # Upload the PDF file
-        file = client.files.create(
-            file=open(DOWNLOAD_TEMP_FILE, "rb"),
-            purpose="assistants",
-        )
+        with open(DOWNLOAD_TEMP_FILE, "rb") as f:
+            file = client.files.create(
+                file=f,
+                purpose="assistants",
+            )
 
         delete_temp_file()
 
-        system_instruction = """\
-あなたは論文を要約するためのAIです。\
-出力はresponse_formatに従って記述してください。\
+        section_outputs: list[SectionSchema] = []
+
+        # Common system prompt for all sections
+
+        system_prompt = """\
+# Task: Thesis/Paper/Article analysis
+論文の添付ファイルを基に、ユーザーの命令に従って論文から情報を要約・抽出してください。
+
+# Response format: Use given Json schema
+論文の要約をJson schemaに従って出力してください。
+
+# Language: Japanese
+項目名や内容は日本語で記載してください。ただし、論文中にある英語の用語はそのまま使用してください。
+
+# Background: Making a summary report of the thesis
+ユーザーの論文の要約レポートを補助して下さい。
 """
 
-        instruction = """\
-# task: 添付した論文を以下の項目で要約してください。
-各項目ごとに設定されている注意点・文字数に従って記述してください。
+        # Generate summary of all sections
 
-## 背景
-    - 発表時点での研究状況と問題点
-    - 5文程度
-## 概要
-    - 論文全体の概要
-    - 10文程度
-## 新規性・差分
-    - 他の研究との比較
-    - 10文程度
-## 手法
-    - 論文が提案する事項
-    - 重要な手法やアルゴリズムを含める
-    - 一番重要なので詳細に記述
-    - 20文程度
-## 結果
-    - 論文の結果
-    - 著者が特に重要だと考える結果を記述
-    - 10文程度
-## 議論
-    - 著者が考える結果に対する考察
-    - 10文程度
+        user_prompt = """\
+# Task: Generate summary from Thesis/Paper/Article
+この論文の概要について教えてください。
+このセクションは「概要」セクションに相当します。
+ここでは構造的な文章よりも、論文全体の流れをつかめるような要約をしてください。
 
-# output format
-{
-    "sections": [
-        {
-            "section": "項目名 例: 背景",
-            "content": "要約内容"
-        },
-        ...
-    ]
-}
+# Response format: Use given Json schema
+section.title: 概要
+section.contents: 論文中の「abstract/summary/background」の要約
+section.subsections: empty
 """
 
-        completion = client.chat.completions.create(
-            model=OPENAI_MODEL,
-            messages=[
-                {
-                    "role": "developer",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": system_instruction,
-                        }
-                    ],
-                },
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "file",
-                            "file": {"file_id": file.id},
-                        },
-                        {
-                            "type": "text",
-                            "text": instruction,
-                        },
-                    ],
-                },
-            ],
-            response_format={
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "paper_summary",
-                    "strict": True,
-                    "schema": {
-                        "type": "object",
-                        "properties": {
-                            "sections": {
-                                "type": "array",
-                                "items": {
-                                    "type": "object",
-                                    "properties": {
-                                        "section": {
-                                            "type": "string",
-                                            "description": "項目名 例: 背景",
-                                        },
-                                        "content": {
-                                            "type": "string",
-                                            "description": "要約内容",
-                                        },
-                                    },
-                                    "required": ["section", "content"],
-                                    "additionalProperties": False,
-                                },
-                            },
-                        },
-                        "required": ["sections"],
-                        "additionalProperties": False,
-                    },
-                },
-            },
+        output = generate_completion(
+            file_id=file.id,
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            response_schema=SectionSchema.model_json_schema(),
         )
-        # Extract the summary from the response
-        summary = json.loads(completion.choices[0].message.content)["sections"]
+        section_outputs.append(SectionSchema.model_validate(output))
 
-        system_instruction = """\
-あなたは論文を解析するためのAIです。\
-出力はresponse_formatに従って記述してください。\
-"""
-        instruction = """\
-# task: 添付した論文からキーワード・トピックを10個抽出してください。
+        # Generate summary of difference from previous works
 
-# output format
-{
-    "keywords": [
-        "keyword1",
-        "keyword2",
-        ...
-    ]
-}
+        user_prompt = """\
+# Task: Generate summary from Thesis/Paper/Article
+このセクションは「新規性・差分」セクションに相当します。
+論文中で述べられる既存手法との違いや提案手法のメリット・デメリットを基に詳しくまとめてください。
+読みやすいように、構造的な文章で要約してください。
+
+# Output format: Use given Json schema
+section.title: 新規性・差分
+section.contents: 論文中の「新規性・差分」の概要
+section.subsections: 「新規性・差分」の各サブセクション
+section.subsections[].title: サブセクションのタイトル
+section.subsections[].contents: サブセクションの概要
 """
 
-        completion = client.chat.completions.create(
-            model=OPENAI_MODEL,
-            messages=[
-                {
-                    "role": "developer",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": system_instruction,
-                        }
-                    ],
-                },
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "file",
-                            "file": {"file_id": file.id},
-                        },
-                        {
-                            "type": "text",
-                            "text": instruction,
-                        },
-                    ],
-                },
-            ],
-            response_format={
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "paper_keywords",
-                    "strict": True,
-                    "schema": {
-                        "type": "object",
-                        "properties": {
-                            "keywords": {
-                                "type": "array",
-                                "items": {
-                                    "type": "string",
-                                    "description": "キーワード",
-                                },
-                            },
-                        },
-                        "required": ["keywords"],
-                        "additionalProperties": False,
-                    },
-                },
-            },
+        output = generate_completion(
+            file_id=file.id,
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            response_schema=SectionSchema.model_json_schema(),
         )
-        # Extract the keywords from the response
-        keywords = json.loads(completion.choices[0].message.content)["keywords"]
+        section_outputs.append(SectionSchema.model_validate(output))
+
+        # Generate summary of methods
+
+        user_prompt = """\
+# Task: Generate summary from Thesis/Paper/Article
+このセクションは「手法」セクションに相当します。
+論文が提案している概念・手法・実施した実験について、論文の論述の流れを基に詳しく教えてください。
+読みやすいように、構造的な文章で要約してください。
+
+# Output format: Use given Json schema
+section.title: 手法
+section.contents: 論文中の「手法」の概要
+section.subsections: 論文中の「手法」の各サブセクション
+section.subsections[].title: サブセクションのタイトル
+section.subsections[].contents: サブセクションの概要
+"""
+
+        output = generate_completion(
+            file_id=file.id,
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            response_schema=SectionSchema.model_json_schema(),
+        )
+        section_outputs.append(SectionSchema.model_validate(output))
+
+        # Generate summary of results
+
+        user_prompt = """\
+# Task: Generate summary from Thesis/Paper/Article
+このセクションは「結果」セクションに相当します。
+論文中で述べられる実験結果や評価結果を基に詳しくまとめてください。
+特に、筆者が強調しているポイントや、実験結果の解釈についても詳しく教えてください。
+読みやすいように、構造的な文章で要約してください。
+
+# Output format: Use given Json schema
+section.title: 結果
+section.contents: 論文中の「結果」の概要
+section.subsections: 「結果」の各サブセクション
+section.subsections[].title: サブセクションのタイトル
+section.subsections[].contents: サブセクションの概要
+"""
+
+        output = generate_completion(
+            file_id=file.id,
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            response_schema=SectionSchema.model_json_schema(),
+        )
+        section_outputs.append(SectionSchema.model_validate(output))
+
+        # Extract keywords
+        system_prompt = """\
+# Task: Thesis/Paper/Article analysis
+論文の添付ファイルを基に、ユーザーの命令に従って論文から情報を要約・抽出してください。
+"""
+
+        user_prompt = """\
+# Task: Extract keywords or topics from Thesis/Paper/Article
+この論文のキーワードやトピックを10個以上抽出してください。" \
+"""
+
+        output = generate_completion(
+            file_id=file.id,
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            response_schema=KeywordsSchema.model_json_schema(),
+        )
 
         client.files.delete(file.id)
-        return summary, keywords
+
+        return (
+            DocumentSchema(sections=section_outputs).to_markdown(),
+            KeywordsSchema.model_validate(output).keywords,
+        )
+
     except Exception as e:
-        print(f"Error generating summary: {e}")
+        print(f"Error downloading PDF: {e}")
         return None
 
 
@@ -236,7 +252,8 @@ if __name__ == "__main__":
     pdf_url = "https://arxiv.org/pdf/1706.03762"  # Attention Is All You Need
     summary, keywords = generate_summary(pdf_url)
 
-    print("Summary:")
-    pprint(summary)
-    print("\nKeywords:")
-    pprint(keywords)
+    print("# Keywords")
+    print(keywords)
+    print()
+    print("# Summary")
+    print(summary)
