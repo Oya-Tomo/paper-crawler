@@ -19,13 +19,10 @@ client = openai.OpenAI()
 client.api_key = OPENAI_API_KEY
 
 
-DOWNLOAD_TEMP_FILE = "/tmp/paper.pdf"
-
-
-def download_pdf(url: str) -> bool:
+def download_pdf(url: str, path: str) -> bool:
     response = requests.get(url)
     if response.status_code == 200:
-        with open(DOWNLOAD_TEMP_FILE, "wb") as f:
+        with open(path, "wb") as f:
             f.write(response.content)
         return True
     else:
@@ -33,9 +30,9 @@ def download_pdf(url: str) -> bool:
         return False
 
 
-def delete_temp_file():
+def delete_temp_file(path: str):
     try:
-        os.remove(DOWNLOAD_TEMP_FILE)
+        os.remove(path)
     except OSError as e:
         print(f"Error deleting temp file: {e}")
 
@@ -84,24 +81,24 @@ def generate_completion(
     return json.loads(completion.choices[0].message.content)
 
 
-def generate_summary(pdf: str) -> (
-    tuple[
-        list[dict[str, str]],
-        list[str],
-    ]
-    | None
-):
+def generate_summary(id: str, src: str, pdf: str) -> tuple[str, list[str]] | None:
     try:
-        if not download_pdf(pdf):
+        download_path = f"/tmp/paper-{\
+                id.replace("/", "%").replace(".", "_")\
+            }-{\
+                src.replace('/', '%').replace('.', '_')\
+            }.pdf"
+
+        if not download_pdf(pdf, download_path):
             return None
 
-        with open(DOWNLOAD_TEMP_FILE, "rb") as f:
+        with open(download_path, "rb") as f:
             file = client.files.create(
                 file=f,
                 purpose="assistants",
             )
 
-        delete_temp_file()
+        delete_temp_file(download_path)
 
         section_outputs: list[SectionSchema] = []
 

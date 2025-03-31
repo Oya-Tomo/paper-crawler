@@ -247,7 +247,7 @@ class SummarizePaperResponse(BaseModel):
 
 def summarize_paper_on_background(paper: Paper):
     print(f"Summarizing paper {paper.id} from {paper.src}")
-    result = generate_summary(paper.pdf)
+    result = generate_summary(paper.id, paper.src, paper.pdf)
     if result is None:
         print("Failed to generate summary")
         return
@@ -263,9 +263,7 @@ def summarize_paper_on_background(paper: Paper):
             return
 
         paper_row.topics = topics
-        paper_row.summary = "\n\n".join(
-            [f"## {sect["section"]}\n{sect["content"]}" for sect in summary]
-        )
+        paper_row.summary = summary
         session.commit()
         print("Summary generated successfully")
 
