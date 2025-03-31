@@ -1,6 +1,6 @@
 import pprint
 from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Any, Literal
+from typing import Literal
 
 
 class ElementSchema(BaseModel, extra="forbid"):
