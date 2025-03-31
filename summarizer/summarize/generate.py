@@ -4,7 +4,7 @@ import json
 import requests
 import openai
 
-from .schema import DocumentSchema, SectionSchema, KeywordsSchema
+from schema import DocumentSchema, SectionSchema, KeywordsSchema
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", None)
 if not OPENAI_API_KEY:
@@ -170,6 +170,7 @@ section.subsections[].contents: サブセクションの概要
 # Task: Generate summary from Thesis/Paper/Article
 このセクションは「手法」セクションに相当します。
 論文が提案している概念・手法・実施した実験について、論文の論述の流れを基に詳しく教えてください。
+数式や表、疑似コードなどは、なるべく省略せずに記載してください。
 読みやすいように、構造的な文章で要約してください。
 
 # Output format: Use given Json schema
@@ -247,7 +248,7 @@ if __name__ == "__main__":
     from pprint import pprint
 
     pdf_url = "https://arxiv.org/pdf/1706.03762"  # Attention Is All You Need
-    summary, keywords = generate_summary(pdf_url)
+    summary, keywords = generate_summary("1706.03762", "arxiv", pdf_url)
 
     print("# Keywords")
     print(keywords)
